@@ -1,0 +1,14 @@
+# Folders
+.settings/
+Debug/
+targetConfigs/
+
+# Files
+.ccsproject
+.cproject
+.project
+*.cmd
+*.launches
+
+# Vs Code
+*.vscode
