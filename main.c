@@ -3,8 +3,8 @@
 
 /////////////////////  MEMORY USED  ///////////////////
 //
-// Flash/FRAM usage is 2448 bytes of 4KB = 59.76% used
-//        RAM usage is 112 bytes of 256B = 43.75% used
+// Flash/FRAM usage is 870 bytes of 4KB = 21.24% used
+//        RAM usage is 94 bytes of 256B = 36.71% used
 //
 /////////////////////  DEVICE PINOUTS  ///////////////////
 //

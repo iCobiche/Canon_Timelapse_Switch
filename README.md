@@ -6,8 +6,8 @@ This project contains embedded C code for the MSP430 microcontroller, specifical
 
 ## Memory and Device Configuration
 
-- Flash/FRAM usage: 2448 bytes of 4KB (59.76% used)
-- RAM usage: 112 bytes of 256B (43.75% used)
+- Flash/FRAM usage: 870 bytes of 4KB (21.24% used)
+- RAM usage: 94 bytes of 256B (36.71% used)
 
 The device used for this project is MSP4302332.
 
