@@ -1,6 +1,11 @@
 #include <msp430.h>
 #include <std_types.h>
 
+/////////////////////  MEMORY USED  ///////////////////
+//
+// Flash/FRAM usage is 2448 bytes of 4KB = 59.76% used
+//        RAM usage is 112 bytes of 256B = 43.75% used
+//
 /////////////////////  DEVICE PINOUTS  ///////////////////
 //
 //                       MSP4302332
@@ -21,22 +26,22 @@
 //
 // PIN  | FUNCTION                        | CONNECTION
 //------+---------------------------------+------------------
-//  01  | P1.0/TA0CLK/ACLK/A0             |
-//  02  | P1.1/TA0.0/A1                   |
-//  03  | P1.2/TA0.1/A2                   |
-//  04  | P1.3/ADC10CLK/A3/VREF-/VEREF    |
-//  05  | P1.4/SMCLK/A4/VREF+/VEREF+/TCK  |
-//  06  | P1.5/TA0.0/SCLK/A5/TMS          |
-//  07  | P1.6/TA0.1/SDO/SCL/A6/TDI/TCLK  |
-//  08  | P1.7/SDI/TDO/TDI                |
-//  09  | RST/NMI/SBWTDIO                 |
-//  10  | TEST/SBWTCK                     |
-//  11  | XOUT/P2.7                       |
-//  12  | XIN/P2.6/TA0.1                  |
-//  13  | AVSS                            |
-//  14  | DVSS                            |
-//  15  | AVCC                            |
-//  16  | DVCC                            |
+//  01  | P1.0/TA0CLK/ACLK/A0             | BTN_DOWN
+//  02  | P1.1/TA0.0/A1                   | BTN_UP
+//  03  | P1.2/TA0.1/A2                   | BTN_SHOT
+//  04  | P1.3/ADC10CLK/A3/VREF-/VEREF    | FOCUS (To BSS138)
+//  05  | P1.4/SMCLK/A4/VREF+/VEREF+/TCK  | CAPTURE (To BSS138)
+//  06  | P1.5/TA0.0/SCLK/A5/TMS          | LED A
+//  07  | P1.6/TA0.1/SDO/SCL/A6/TDI/TCLK  | LED B
+//  08  | P1.7/SDI/TDO/TDI                | LED C
+//  09  | RST/NMI/SBWTDIO                 | JTAG
+//  10  | TEST/SBWTCK                     | JTAG
+//  11  | XOUT/P2.7                       | -
+//  12  | XIN/P2.6/TA0.1                  | -
+//  13  | AVSS                            | GND
+//  14  | DVSS                            | GND
+//  15  | AVCC                            | 3.3V
+//  16  | DVCC                            | 3.3V
 //------+---------------------------------+------------------
 
 #define BTN_SHOT  (BIT2)
