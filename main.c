@@ -52,18 +52,13 @@
 #define LED_A     (BIT5)
 #define LED_B     (BIT6)
 #define LED_C     (BIT7)
+#define FACTOR    (5)
 
 // Types defs
 typedef enum
 {
-  s_1s5 = 0u,
-  s_2s,
-  s_3s,
-  s_5s,
-  s_10s,
-  s_20s,
-  s_30s,
-  s_60s
+  firt_time = 0u,
+  last_time = 7u
 } Selection_t;
 
 typedef enum
@@ -73,10 +68,20 @@ typedef enum
 } State_t;
 
 // Global variables
-uint8       counter       = 0u;         // Up to 120 counts
+uint16      counter       = 0u;         // Up to 120 counts
 State_t     state         = pause;
-Selection_t selection     = s_1s5;      // Default
-uint8       selectTime[]  = {6u, 8u, 12u, 20u, 40u, 80u, 120u, 240u};
+Selection_t selection     = firt_time;  // Default
+uint16      selectTime[]  = 
+{
+  2u *FACTOR, 
+  3u * FACTOR,
+  4u * FACTOR,
+  5u * FACTOR,
+  10u * FACTOR,
+  20u * FACTOR,
+  30u * FACTOR,
+  60u * FACTOR
+};
 
 void startTimer()
 {
@@ -100,6 +105,26 @@ void activeLeds(Selection_t selection)
   disactiveLeds();
   // 0b00000CBA -> 0bABC00000
   P1OUT |= ((selection & BIT0) << 7) | ((selection & BIT1) << 5) | ((selection & BIT2) << 3);
+}
+
+void captureOn(void)
+{
+  P1OUT |= (CAPTURE);
+}
+
+void captureOff(void)
+{
+  P1OUT &= ~(CAPTURE);
+}
+
+void focusOn(void)
+{
+  P1OUT |= (FOCUS);
+}
+
+void focusOff(void)
+{
+  P1OUT &= ~(FOCUS);
 }
 
 /**
@@ -139,7 +164,7 @@ void main(void)
 	
   // TIMER
   TACCTL0   = CCIE;                           // Interrupt enabled
-  TACCR0    = 31250;                          // 1MHz / 8 * 31250 = every 250ms
+  TACCR0    = 25000;                          // 1MHz / 8 * 25000 = every 200ms
   TAR       = 0;                              // Reset counter
   TACTL     = TASSEL_2 + MC_1 + ID_3;         // SMCLK, Up mode, /8
 
@@ -155,14 +180,15 @@ void main(void)
     if(state == play)
     {
       // Press
-      P1OUT |= (FOCUS | CAPTURE);
+      focusOn();
       startTimer();
       disactiveLeds();
     }
     else if(state == pause)
     {
       // Just to ensure unpress
-      P1OUT &= ~(FOCUS | CAPTURE);
+      focusOff();
+      captureOff();
       stopTimer();
       activeLeds(selection);
     }
@@ -184,17 +210,24 @@ void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) Timer_A (void)
   {
     counter++;
 
-    // Unpress
-    if(counter == 1u)
+    // Capture
+    if(counter == FACTOR)
     {
-      P1OUT &= ~(FOCUS | CAPTURE);
+      captureOn();
+    }
+
+    // Unpress
+    if(counter == (FACTOR + 1))
+    {
+      focusOff();
+      captureOff();
     }
 
     // Reset counter
     if(counter == selectTime[selection])
     {
       // PRESS
-      P1OUT |= (FOCUS | CAPTURE);
+      focusOn();
       counter = 0;
     }
   }
@@ -226,9 +259,9 @@ void __attribute__ ((interrupt(PORT1_VECTOR))) Port_1 (void)
   {
     if(state == pause)
     {
-      if(selection == s_60s)
+      if(selection == last_time)
       {
-        selection = s_1s5;
+        selection = firt_time;
       }
       else
       {
@@ -241,9 +274,9 @@ void __attribute__ ((interrupt(PORT1_VECTOR))) Port_1 (void)
   {
     if(state == pause)
     {
-      if(selection == s_1s5)
+      if(selection == firt_time)
       {
-        selection = s_60s;
+        selection = last_time;
       }
       else
       {
