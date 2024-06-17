@@ -31,28 +31,51 @@
 //  03  | P1.2/TA0.1/A2                   | BTN_SHOT
 //  04  | P1.3/ADC10CLK/A3/VREF-/VEREF    | FOCUS (To BSS138)
 //  05  | P1.4/SMCLK/A4/VREF+/VEREF+/TCK  | CAPTURE (To BSS138)
-//  06  | P1.5/TA0.0/SCLK/A5/TMS          | LED A
+//  06  | P1.5/TA0.0/SCLK/A5/TMS          | LED C
 //  07  | P1.6/TA0.1/SDO/SCL/A6/TDI/TCLK  | LED B
-//  08  | P1.7/SDI/TDO/TDI                | LED C
+//  08  | P1.7/SDI/TDO/TDI                | LED A
 //  09  | RST/NMI/SBWTDIO                 | JTAG
 //  10  | TEST/SBWTCK                     | JTAG
-//  11  | XOUT/P2.7                       | -
-//  12  | XIN/P2.6/TA0.1                  | -
+//  11  | XOUT/P2.7                       | XTAL
+//  12  | XIN/P2.6/TA0.1                  | XTAL
 //  13  | AVSS                            | GND
 //  14  | DVSS                            | GND
 //  15  | AVCC                            | 3.3V
 //  16  | DVCC                            | 3.3V
 //------+---------------------------------+------------------
 
-#define BTN_SHOT  (BIT2)
-#define BTN_UP    (BIT1)
-#define BTN_DOWN  (BIT0)
-#define FOCUS     (BIT3)
-#define CAPTURE   (BIT4)
-#define LED_A     (BIT5)
-#define LED_B     (BIT6)
-#define LED_C     (BIT7)
-#define FACTOR    (5)
+// PINOUT
+#define BTN_SHOT          (BIT2)
+#define BTN_UP            (BIT1)
+#define BTN_DOWN          (BIT0)
+#define FOCUS             (BIT3)
+#define CAPTURE           (BIT4)
+#define LED_A             (BIT7)
+#define LED_B             (BIT6)
+#define LED_C             (BIT5)
+#define FACTOR            (8u)
+
+// Features
+//#define WITH_FOCUS
+
+// Time availables in seconds
+#define TIME_XS_1         (2u)        // 001
+#define TIME_XS_2         (5u)        // 010
+#define TIME_XS_3         (10u)       // 011
+#define TIME_XS_4         (30u)       // 100
+#define TIME_XS_5         (60u)       // 101
+#define TIME_XS_6         (120u)      // 110
+#define TIME_XS_7         (300u)      // 111
+
+// Table of times
+#define SEL_TIME_1        (TIME_XS_1 * FACTOR)
+#define SEL_TIME_2        (TIME_XS_2 * FACTOR)
+#define SEL_TIME_3        (TIME_XS_3 * FACTOR)
+#define SEL_TIME_4        (TIME_XS_4 * FACTOR)
+#define SEL_TIME_5        (TIME_XS_5 * FACTOR)
+#define SEL_TIME_6        (TIME_XS_6 * FACTOR)
+#define SEL_TIME_7        (TIME_XS_7 * FACTOR)
+#define WAITING_TO_IDLE   (5u * FACTOR)
 
 // Types defs
 typedef enum
@@ -64,67 +87,90 @@ typedef enum
 typedef enum
 {
   pause = 0u,
-  play
+  play,
+  idle
 } State_t;
 
 // Global variables
 uint16      counter       = 0u;         // Up to 120 counts
-State_t     state         = pause;
+State_t     state         = idle;
 Selection_t selection     = firt_time;  // Default
 uint16      selectTime[]  = 
 {
-  2u *FACTOR, 
-  3u * FACTOR,
-  4u * FACTOR,
-  5u * FACTOR,
-  10u * FACTOR,
-  20u * FACTOR,
-  30u * FACTOR,
-  60u * FACTOR
+  0, 
+  SEL_TIME_1,
+  SEL_TIME_2,
+  SEL_TIME_3,
+  SEL_TIME_4,
+  SEL_TIME_5,
+  SEL_TIME_6,
+  SEL_TIME_7
 };
 
-void startTimer()
+static inline void startTimer()
 {
-  TAR    = 0u;
-  TACTL |= MC_1;
+  counter = 0;
+  TAR     = 0u;
+  TACTL  |= MC_1;
 }
 
-void stopTimer()
+static inline void stopTimer()
 {
+  counter = 0;
   TACTL &= ~MC_3;
   TAR    = 0u;
 }
 
-void disactiveLeds(void)
+static inline void turnOffLeds(void)
 {
   P1OUT &= ~(LED_A | LED_B | LED_C);   // Turn off led
 }
 
-void activeLeds(Selection_t selection)
+static inline void turnOnLeds(Selection_t selection)
 {
-  disactiveLeds();
+  turnOffLeds();
   // 0b00000CBA -> 0bABC00000
-  P1OUT |= ((selection & BIT0) << 7) | ((selection & BIT1) << 5) | ((selection & BIT2) << 3);
+  P1OUT |= ((selection & BIT2) << 5) | ((selection & BIT1) << 5) | ((selection & BIT0) << 5);
 }
 
-void captureOn(void)
+static inline void captureOn(void)
 {
   P1OUT |= (CAPTURE);
 }
 
-void captureOff(void)
+static inline void captureOff(void)
 {
   P1OUT &= ~(CAPTURE);
 }
 
-void focusOn(void)
+static inline void focusOn(void)
 {
   P1OUT |= (FOCUS);
 }
 
-void focusOff(void)
+static inline void focusOff(void)
 {
   P1OUT &= ~(FOCUS);
+}
+
+static inline void enablingAllButtons(void)
+{
+  P1IE |= (BTN_SHOT | BTN_UP | BTN_DOWN);   // Enabled interrupt
+}
+
+static inline void disablingAllButtons(void)
+{
+  P1IE &= ~(BTN_SHOT | BTN_UP | BTN_DOWN);   // Disabled interrupt
+}
+
+static inline void enablingUpDownButtons(void)
+{
+  P1IE |= (BTN_UP | BTN_DOWN);   // Enabled interrupt
+}
+
+static inline void disablingUpDownButtons(void)
+{
+  P1IE &= ~(BTN_UP | BTN_DOWN);   // Disabled interrupt
 }
 
 /**
@@ -143,14 +189,14 @@ void main(void)
   // Port init
   // PORT 1
   P1IN    = 0u;
-  P1OUT   = (BTN_SHOT | BTN_UP | BTN_DOWN);
+  P1OUT   = 0U;
   P1DIR   = (FOCUS | CAPTURE | LED_A | LED_B | LED_C);
   P1IFG   = 0u;
   P1IES   = (BTN_SHOT | BTN_UP | BTN_DOWN);   // Falling edge
   P1IE    = (BTN_SHOT | BTN_UP | BTN_DOWN);   // Enabled interrupt
   P1SEL   = 0u;
   P1SEL2  = 0u;
-  P1REN   = (BTN_SHOT | BTN_UP | BTN_DOWN);
+  P1REN   = 0u;
   // PORT 2
   P2IN    = 0u;
   P2OUT   = 0u;
@@ -158,21 +204,26 @@ void main(void)
   P2IFG   = 0u;
   P2IES   = 0u;
   P2IE    = 0u;
-  P2SEL   = 0u;
+  P2SEL   = (BIT7 | BIT6);
   P2SEL2  = 0u;
   P2REN   = 0u;
 	
   // TIMER
   TACCTL0   = CCIE;                           // Interrupt enabled
-  TACCR0    = 25000;                          // 1MHz / 8 * 25000 = every 200ms
+  TACCR0    = 512-1;                          // 32k / 8 / 8 = 512 = every 125ms
   TAR       = 0;                              // Reset counter
-  TACTL     = TASSEL_2 + MC_1 + ID_3;         // SMCLK, Up mode, /8
+  TACTL     = TASSEL_1 + MC_1 + ID_3;         // SMCLK, Up mode, /8
 
   // Enable interrupt
   _enable_interrupt();
 
+  // Disabling all
+  turnOffLeds();
+  captureOff();
+  focusOff();
+
   // Sleep up to start
-  LPM0;
+  LPM4;
 	
   // Maon loop
   while(1)
@@ -180,19 +231,30 @@ void main(void)
     if(state == play)
     {
       // Press
+      #ifdef WITH_FOCUS
       focusOn();
+      #else
+      captureOn();
+      #endif
       startTimer();
-      disactiveLeds();
+      turnOffLeds();
+      LPM3;
     }
     else if(state == pause)
     {
       // Just to ensure unpress
       focusOff();
       captureOff();
-      stopTimer();
-      activeLeds(selection);
+      startTimer();
+      turnOnLeds(selection);
+      LPM3;
     }
-    LPM0;
+    else if(state == idle)
+    {
+      stopTimer();
+      turnOffLeds();
+      LPM4;
+    }
 	}
 }
 
@@ -206,29 +268,75 @@ void __attribute__ ((interrupt(TIMER0_A0_VECTOR))) Timer_A (void)
 #error Compiler not supported!
 #endif
 {
+  counter++;
+
   if(state == play)
   {
-    counter++;
-
-    // Capture
-    if(counter == FACTOR)
+    if(0u == selectTime[selection])   // On demand
     {
-      captureOn();
+      if(counter == 1u)
+      {
+        #ifdef WITH_FOCUS
+        focusOff();
+        captureOn();
+        #else
+        captureOff();
+        #endif
+      }
+      else if(counter == 2u)
+      {
+        #ifdef WITH_FOCUS
+        captureOff();
+        #endif
+        counter = 0;
+      }
+      else
+      {
+        // Do nothing
+      }
     }
-
-    // Unpress
-    if(counter == (FACTOR + 1))
+    else                              // Selected time
     {
-      focusOff();
-      captureOff();
+      // Capturing or Finishing
+      if(counter == 1u)
+      {
+        #ifdef WITH_FOCUS
+        focusOff();
+        captureOn();
+        #else
+        captureOff();
+        #endif
+      }
+
+      // Finishing yes or yes
+      if(counter == 2u)
+      {
+        #ifdef WITH_FOCUS
+        captureOff();
+        #endif
+      }
+
+      // Reset counter
+      if(counter == selectTime[selection])
+      {
+        // PRESS
+        #ifdef WITH_FOCUS
+        focusOn();
+        #else
+        captureOn();
+        #endif
+        counter = 0;
+      }
     }
-
-    // Reset counter
-    if(counter == selectTime[selection])
+  }
+  else if(state == pause)
+  {
+    // Wait 5 seconds only
+    if(counter == WAITING_TO_IDLE)
     {
-      // PRESS
-      focusOn();
+      state = idle;
       counter = 0;
+      LPM3_EXIT;
     }
   }
 }
@@ -243,47 +351,73 @@ void __attribute__ ((interrupt(PORT1_VECTOR))) Port_1 (void)
 #error Compiler not supported!
 #endif
 {
-  if(P1IFG & BTN_SHOT)
+  if(state == idle)
   {
-    if(state == pause)
-    {
-      state = play;
-    }
-    else
-    {
-      state = pause;
-    }
-    P1IFG &= ~BTN_SHOT;
+    state = pause;
+    LPM4_EXIT;
+    P1IFG &= ~(BTN_SHOT | BTN_UP | BTN_DOWN);
   }
-  else if(P1IFG & BTN_UP)
+  else
   {
-    if(state == pause)
+    if(P1IFG & BTN_SHOT)
     {
-      if(selection == last_time)
+      if(state == pause)
       {
-        selection = firt_time;
+        state = play;
+        disablingUpDownButtons();
+      }
+      else if(state == play)
+      {
+        state = pause;
+        enablingUpDownButtons();
       }
       else
       {
-        selection++;
+        // Do nothing
       }
+      P1IFG &= ~BTN_SHOT;
     }
-    P1IFG &= ~BTN_UP;
-  }
-  else if(P1IFG & BTN_DOWN)
-  {
-    if(state == pause)
+    else if(P1IFG & BTN_UP)
     {
-      if(selection == firt_time)
+      if(state == pause)
       {
-        selection = last_time;
+        if(selection == last_time)
+        {
+          selection = firt_time;
+        }
+        else
+        {
+          selection++;
+        }
+        counter = 0u;
       }
       else
       {
-        selection--;
+        // Do nothing
       }
+      P1IFG &= ~BTN_UP;
     }
-    P1IFG &= ~BTN_DOWN;
+    else if(P1IFG & BTN_DOWN)
+    {
+      if(state == pause)
+      {
+        if(selection == firt_time)
+        {
+          selection = last_time;
+        }
+        else
+        {
+          selection--;
+        }
+        counter = 0u;
+      }
+      else
+      {
+        // Do nothing
+      }
+      P1IFG &= ~BTN_DOWN;
+    }
+    LPM3_EXIT;
   }
-  LPM0_EXIT;
+  
 }
